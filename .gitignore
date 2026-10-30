@@ -1,0 +1,5 @@
+/gtsdb
+/tsbench
+/data/
+*.test
+*.out
