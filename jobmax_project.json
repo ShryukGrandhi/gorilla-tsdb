@@ -1,0 +1,17 @@
+{
+  "name": "gorilla-tsdb",
+  "language": "Go",
+  "tech": ["Golang", "Concurrency (goroutines, sync)", "Write-ahead log / crash recovery", "Gorilla time-series compression", "PromQL", "GitHub Actions CI"],
+  "targets": ["Golang", "systems programming in Go", "concurrent, race-free Go code", "storage durability and crash recovery", "monitoring/observability infrastructure", "testing and benchmarking"],
+  "bullets": [
+    "Built a time-series database in Golang: Gorilla-compressed chunks, inverted label index, CRC-checked WAL and checkpoints; ingests 15.8M samples/s with WAL across 28 goroutines",
+    "Wrote a PromQL-subset lexer, parser and evaluator in Go (rate, sum by, range queries); 1h/1m range query over 1000 series runs at 26.6ms p50 on a 14.4M-sample head",
+    "Cut restart time from 1.27s WAL replay to 424ms via concurrent checkpoints; race-tested (go test -race) writers vs. checkpoints with exact sample-count recovery checks"
+  ],
+  "summary": {
+    "what": "A single-node time-series database in Go with an HTTP API: Prometheus-text ingest, a PromQL-subset query engine, Gorilla-compressed in-memory storage, a write-ahead log, checkpoints and retention.",
+    "how": "Standard library only. A bit-level Gorilla encoder (delta-of-delta timestamps, XOR floats) stores 120-sample chunks per series. Series live in 256 lock stripes, and a postings index resolves label matchers through sorted-list intersection and subtraction. Commits are logged to a segmented CRC-32C WAL before they are applied. A hand-written recursive-descent parser feeds an evaluator that fetches each selector's data once per query. tsbench generates a 10,000-series workload and measures compression, ingest, query latency and recovery.",
+    "hardest": "Making checkpoints safe while writes continue. Commits hold a shared lock across WAL write and memory apply. The WAL cut takes the lock exclusively, so older segments are fully applied before the snapshot starts, and duplicates in the new segment are dropped on replay. New series are logged while their stripe lock is held, and appenders re-resolve series deleted by retention.",
+    "say": "I built a Prometheus-style time-series database in Go from the bit level up: Gorilla compression, a WAL, an inverted index and a PromQL subset. The interesting part was the concurrency around checkpoints and retention. I tested it with the race detector by running writers against a continuous checkpoint loop and then checking that a restart recovers every sample. On a 14.4M-sample synthetic workload it ingests about 15.8M samples/s with the WAL on, and checkpoints cut restart time from 1.27s to 424ms."
+  }
+}
