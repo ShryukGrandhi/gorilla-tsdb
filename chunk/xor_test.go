@@ -168,3 +168,15 @@ func BenchmarkIterate(b *testing.B) {
 		}
 	}
 }
+
+func TestDoDBucketBoundaries(t *testing.T) {
+	// Exercise each bucket edge in both directions.
+	var in []sample
+	ts, delta := int64(1_000_000_000), int64(15_000)
+	for _, dod := range []int64{0, 63, -64, 64, -65, 8191, -8192, 8192, -8193, 524287, -524288, 524288, -524289, 1 << 40} {
+		delta += dod
+		ts += delta
+		in = append(in, sample{ts, float64(dod)})
+	}
+	roundTrip(t, in)
+}

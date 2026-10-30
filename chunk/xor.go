@@ -8,13 +8,18 @@
 //	v0                  64 bits, IEEE-754
 //	for each later sample:
 //	  delta-of-delta     '0'                         dod == 0
-//	                     '10'   + 14 bits            dod in [-8192, 8191]
-//	                     '110'  + 17 bits            dod in [-65536, 65535]
+//	                     '10'   + 7 bits             dod in [-64, 63]
+//	                     '110'  + 14 bits            dod in [-8192, 8191]
 //	                     '1110' + 20 bits            dod in [-524288, 524287]
 //	                     '1111' + 64 bits            anything else
-//	  value XOR          '0'                         same value as before
-//	                     '10' + meaningful bits      fits previous window
-//	                     '11' + 5b leading + 6b len + meaningful bits
+//
+// Timestamps are milliseconds. The 7-bit bucket exists because real scrapers
+// jitter by a few milliseconds around their interval, which would otherwise
+// push almost every sample into the 14-bit bucket.
+//
+//	value XOR          '0'                         same value as before
+//	                   '10' + meaningful bits      fits previous window
+//	                   '11' + 5b leading + 6b len + meaningful bits
 //
 // The sample count is kept outside the bit stream so a reader knows where to
 // stop without a terminator.
@@ -138,12 +143,12 @@ func writeDoD(w *bitstream.Writer, dod int64) {
 	switch {
 	case dod == 0:
 		w.WriteBit(false)
-	case fits(dod, 14):
+	case fits(dod, 7):
 		w.WriteBits(0b10, 2)
-		w.WriteBits(uint64(dod), 14)
-	case fits(dod, 17):
+		w.WriteBits(uint64(dod), 7)
+	case fits(dod, 14):
 		w.WriteBits(0b110, 3)
-		w.WriteBits(uint64(dod), 17)
+		w.WriteBits(uint64(dod), 14)
 	case fits(dod, 20):
 		w.WriteBits(0b1110, 4)
 		w.WriteBits(uint64(dod), 20)
@@ -255,9 +260,9 @@ func (it *Iterator) readDoD() (int64, error) {
 	case 0:
 		return 0, nil
 	case 1:
-		nbits = 14
+		nbits = 7
 	case 2:
-		nbits = 17
+		nbits = 14
 	case 3:
 		nbits = 20
 	default:
